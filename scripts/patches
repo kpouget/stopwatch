@@ -1,0 +1,59 @@
+#! /bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $THIS_DIR/common.sh
+
+QEMU_DIR=$HOME_DIR/qemu
+QEMU_PATCH=$HOME_DIR/patches/qemu.patch
+
+LINUX_DIR=$HOME_DIR/linux
+LINUX_PATCH=$HOME_DIR/patches/linux.patch
+
+create_linux() {
+    git -C $LINUX_DIR add drivers/misc/stopwatch.c include/stopwatch_hw-sw.h
+    git -C $LINUX_DIR add -u
+    git -C $LINUX_DIR diff --cached > "$LINUX_PATCH" && echo "$LINUX_PATCH generated"
+}
+
+create_qemu() {
+    git -C $QEMU_DIR add hw/misc/stopwatch.c hw/misc/stopwatch.h hw/misc/stopwatch_hw-sw.h
+    git -C $QEMU_DIR add -u
+    git -C $QEMU_DIR diff --staged > "$QEMU_PATCH" && echo "$QEMU_PATCH generated"
+}
+
+apply_linux() {
+    cd $LINUX_DIR
+    patch -p1 < "$LINUX_PATCH"  && echo "$LINUX_PATCH applied"
+    echo CONFIG_STOPWATCH=y >> $LINUX_DIR/build/.config
+    $THIS_DIR/linux reconfig
+}
+
+apply_qemu() {
+    cd $QEMU_DIR
+    patch -p1 < "$QEMU_PATCH"  && echo "$QEMU_PATCH applied"
+}
+
+apply_rootfs() {
+    INSTALL_DIR="$HOME_DIR/busybox/_install"
+    if [ ! -e "$INSTALL_DIR/usr" ]; then
+        echo "Rootfs directory ($INSTALL_DIR) seems invalid ..."
+        return 1
+    fi
+
+    mkdir -p "$INSTALL_DIR//guest_fs"
+    cp $HOME_DIR/guest_fs/* "$INSTALL_DIR/guest_fs" -rv
+}
+
+create_rootfs() {
+    INSTALL_DIR="$HOME_DIR/busybox/_install"
+    if [ ! -e "$INSTALL_DIR/guest_fs" ]; then
+        echo "Rootfs directory ($INSTALL_DIR) seems invalid ..."
+        return 1
+    fi
+
+    cp $INSTALL_DIR/guest_fs/* "$HOME_DIR/guest_fs" -rv
+}
+
+ACTIONS="$(echo {create,apply}_{qemu,linux,rootfs}) "
+
+run "$@"

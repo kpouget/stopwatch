@@ -1,0 +1,36 @@
+#ifndef STOPWATCH_HW_SW_H
+#define STOPWATCH_HW_SW_H
+
+struct StopWatch_regs {
+	uint64_t command;
+	uint64_t status;
+};
+
+#define STOPWATCH_MEM_DATA_LENGTH 128
+struct StopWatch_mem {
+	uint64_t data_len;
+	char data[STOPWATCH_MEM_DATA_LENGTH];
+};
+
+#define STOPWATCH_TIMEOUT_MAX 10 // seconds
+
+enum {
+	STOPWATCH_ACTION_RESET,  // 0
+	STOPWATCH_ACTION_START,  // 1
+	STOPWATCH_ACTION_PAUSE,  // 2
+	STOPWATCH_ACTION_UPDATE, // 3
+	STOPWATCH_ACTION_TIMEOUT, // 4
+	STOPWATCH_ACTION_TIMEOUT_ACK, // 5
+
+	STOPWATCH_ACTION_LAST // keep last
+};
+
+enum {
+	STOPWATCH_STATE_RUNNING, // 0
+	STOPWATCH_STATE_RESET,   // 1
+	STOPWATCH_STATE_PAUSED,  // 2
+
+	STOPWATCH_STATE_LAST // keep last
+};
+
+#endif /* STOPWATCH_HW_SW_H */

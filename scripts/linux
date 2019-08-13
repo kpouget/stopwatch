@@ -1,0 +1,51 @@
+#! /bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $THIS_DIR/common.sh
+source $THIS_DIR/config.sh
+
+export ARCH=arm64
+export CROSS_COMPILE=aarch64-linux-gnu-
+
+prepare() {
+    cd "$HOME_DIR"
+    [ ! -d linux ] && git clone $LINUX_REPO linux --single-branch --branch $LINUX_TAG
+
+    cd "$HOME_DIR/linux"
+    mkdir -p build
+
+    make O=build defconfig
+
+    update
+
+    cd "$HOME_DIR/vm"
+    ln -sf ../linux/build/arch/arm64/boot/Image
+
+    echo "Linux: READY"
+}
+
+reconfig() {
+    cd "$HOME_DIR/linux"
+    make O=build oldconfig
+}
+
+update() {
+    cd "$HOME_DIR/linux"
+    make O=build -j$NB_CORES Image
+    echo "Linux: ready"
+}
+
+CFG_KEY="CONFIG_STOPWATCH=y"
+
+module() {
+    if grep -q "$CFG_KEY" "$HOME_DIR/linux/build/.config"; then
+       echo "$CFG_KEY found in linux config, disable it first."
+       return 1.
+    fi
+
+    make -C "$HOME_DIR/driver" && echo && echo "Module: ready (driver/stopwatch.ko)"
+}
+
+ACTIONS="prepare update reconfig module"
+
+run "$@"

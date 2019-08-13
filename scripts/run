@@ -1,0 +1,89 @@
+#! /bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $THIS_DIR/common.sh
+
+VM_DIR="$HOME_DIR/vm"
+PC_BIOS_DIR="$HOME_DIR/qemu/pc-bios/"
+DTB_FILE=$VM_DIR/qemu.dtb
+
+QEMU="$VM_DIR/qemu-system-aarch64"
+LINUX_IMAGE="$VM_DIR/Image"
+ROOTFS="$VM_DIR/rootfs.img"
+ROOTFS_TYPE="raw"
+CMDLINE="root=/dev/vda"
+
+DUMP_DTB=0
+NODEV=0
+RO_RW=ro
+
+help() {
+cat <<EOF
+Usage:
+  dump-dtb      dump Qemu DTB into $DTB_FILE
+  test-and-quit add the test-and-quit stopwatch flag to Linux commandline
+  nodev         run Qemu without the stopwatch device
+  rw            make the rootfs read-write
+EOF
+}
+
+while test $# -gt 0; do
+    case "$1" in
+        dump-dtb)      DUMP_DTB=1 ;;
+        test-and-quit) CMDLINE="$CMDLINE stopwatch=test_and_quit" ;;
+        nodev)        NODEV=1 ;;
+        rw)           RO_RW=rw ;;
+        help) help; exit 0 ;;
+        *)    echo "Unknow option '$1' ..."; exit 1;;
+    esac
+    shift
+done
+
+QEMU_OPT= # let this empty
+qopt() {
+    QEMU_OPT="$QEMU_OPT $@"
+}
+
+if [[ $DUMP_DTB == 1 ]]; then
+    echo "Dumping the DTB into $DTB_FILE"
+    MACHINE_OPT=,dumpdtb=$DTB_FILE
+fi
+
+qopt -machine virt$MACHINE_OPT
+qopt -m 128M
+
+if [ $(uname -m) == "x86_64" ]; then
+  qopt -cpu cortex-a53
+else
+  qopt -cpu host --enable-kvm -smp 1
+fi
+
+DRIVE=file=$ROOTFS,index=0,media=disk,format=$ROOTFS_TYPE,id=fs0
+
+[[ "$RO_RW" == "ro" ]] && DRIVE="$DRIVE,snapshot"
+
+qopt -kernel $LINUX_IMAGE
+qopt -drive "$DRIVE"
+qopt -nographic
+qopt -L $PC_BIOS_DIR
+
+if [[ $NODEV != 1 ]]; then
+    qopt -device stopwatch,start_at_boot=true
+fi
+
+CMD="$QEMU $QEMU_OPT -append \"$CMDLINE quiet $RO_RW\""
+echo $CMD
+echo
+
+eval $CMD
+
+if [[ $DUMP_DTB == 1 ]]; then
+    DTS_DEST="$(dirname "$DTB_FILE")/$(basename "$DTB_FILE" .dtb).dts"
+    dtc -f -I dtb -O dts -o "$DTS_DEST" "$DTB_FILE"
+    echo
+    echo "DTB stored in $DTB_FILE"
+    echo "DTS stored in $DTS_DEST"
+
+    echo
+    cat "$DTS_DEST" | grep stopwatch@ --after-context=4
+fi

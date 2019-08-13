@@ -1,0 +1,40 @@
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index f417b06..ad4e7f6 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -4,6 +4,10 @@
+ 
+ menu "Misc devices"
+ 
++config STOPWATCH
++	bool "Qemu Stopwatch virtual device driver"
++	default y
++
+ config SENSORS_LIS3LV02D
+ 	tristate
+ 	depends on INPUT
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index e39ccbb..7128567 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -59,3 +59,4 @@ obj-$(CONFIG_PCI_ENDPOINT_TEST)	+= pci_endpoint_test.o
+ obj-$(CONFIG_OCXL)		+= ocxl/
+ obj-y				+= cardreader/
+ obj-$(CONFIG_PVPANIC)   	+= pvpanic.o
++obj-$(CONFIG_STOPWATCH) 	+= stopwatch.o
+diff --git a/drivers/misc/stopwatch.c b/drivers/misc/stopwatch.c
+new file mode 120000
+index 0000000..d324532
+--- /dev/null
++++ b/drivers/misc/stopwatch.c
+@@ -0,0 +1 @@
++../../../driver/stopwatch.c
+\ No newline at end of file
+diff --git a/include/stopwatch_hw-sw.h b/include/stopwatch_hw-sw.h
+new file mode 120000
+index 0000000..f1a9fda
+--- /dev/null
++++ b/include/stopwatch_hw-sw.h
+@@ -0,0 +1 @@
++../../driver/stopwatch_hw-sw.h
+\ No newline at end of file

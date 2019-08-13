@@ -1,0 +1,30 @@
+#! /bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $THIS_DIR/common.sh
+source $THIS_DIR/config.sh
+
+prepare() {
+    cd "$HOME_DIR"
+    [ ! -d qemu ] && git clone $QEMU_REPO --single-branch --branch  $QEMU_TAG
+
+    mkdir "$HOME_DIR/qemu/build" -p
+    cd "$HOME_DIR/qemu/build"
+    ../configure $QEMU_CFG $QEMU_DISABLE
+
+    update
+
+    cd "$HOME_DIR/vm"
+    ln -fs "../qemu/build/aarch64-softmmu/qemu-system-aarch64"
+    echo "Qemu: READY"
+}
+
+update() {
+    cd "$HOME_DIR/qemu/build"
+    make -j$NB_CORES
+    echo "Qemu: ready"
+}
+
+ACTIONS="prepare update"
+
+run "$@"

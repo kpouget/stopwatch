@@ -1,0 +1,98 @@
+#! /bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $THIS_DIR/common.sh
+source $THIS_DIR/config.sh
+
+INSTALL_DIR="$HOME_DIR/busybox/_install"
+
+prepare_busybox() {
+    export ARCH=aarch64
+    export CROSS_COMPILE=aarch64-linux-gnu-
+
+    cd "$HOME_DIR"
+    [ ! -d busybox ] && git clone $BUSYBOX_REPO busybox --single-branch --branch $BUSYBOX_TAG
+
+    cd "$HOME_DIR/busybox"
+    make defconfig
+    sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+    make install -j$NB_CORES
+
+    # ajust rootfs
+    cd "$INSTALL_DIR"
+
+    mkdir -p dev etc etc/init.d proc sys
+    ln -sf /sbin/init init
+
+    cat > etc/init.d/rcS <<EOF
+#! /bin/sh
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount debugfs /sys/kernel/debug -t debugfs
+[ -x /guest_fs/init.sh ] && /guest_fs/init.sh
+EOF
+
+    chmod +x etc/init.d/rcS
+
+    echo "Busybox: READY"
+}
+
+build_rootfs() {
+    IMG="$HOME_DIR/vm/rootfs.img"
+    MNT_DIR="$HOME_DIR/busybox/mnt"
+
+    if [ ! -e "$INSTALL_DIR/usr" ]; then
+        echo "Rootfs directory ($INSTALL_DIR) seems invalid ..."
+        return 1
+    fi
+
+    dd if=/dev/zero "of=$IMG" bs=1MiB count=128
+    mkfs.ext4 "$IMG"
+    mkdir -p "$MNT_DIR"
+
+    CMD="
+sudo mount "$IMG" "$MNT_DIR" && \\
+sudo cp -a $INSTALL_DIR/* "$MNT_DIR" && \\
+sync && \\
+sudo umount "$MNT_DIR""
+
+cat <<EOF
+##
+## Please run these sudo commands in another shell, then press <enter>
+##
+
+$CMD || echo Something failed ...
+
+# Hints:
+# * hit <C^z> to go back to your shell, copy/past/exec the lines, then "fg" to restart this script, or
+# * type <x>+<enter> to execute it in this shell
+EOF
+    read go
+
+    if [[ $go == x ]]; then
+        eval $CMD
+        if [[ $? != 0 ]]; then
+            echo "Something failed ..."
+            return 1
+        fi
+    fi
+
+    rmdir "$MNT_DIR"
+
+    echo "Rootfs: READY"
+}
+
+prepare() {
+    prepare_busybox
+    build_rootfs
+}
+
+update() {
+    cp $HOME_DIR/guest_fs/* "$INSTALL_DIR/guest_fs" -rv
+
+    build_rootfs
+}
+
+ACTIONS=" prepare_busybox build_rootfs prepare update"
+
+run "$@"

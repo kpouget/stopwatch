@@ -1,0 +1,73 @@
+diff --git a/hw/arm/sysbus-fdt.c b/hw/arm/sysbus-fdt.c
+index ad698d4..e42c540 100644
+--- a/hw/arm/sysbus-fdt.c
++++ b/hw/arm/sysbus-fdt.c
+@@ -38,6 +38,7 @@
+ #include "hw/vfio/vfio-amd-xgbe.h"
+ #include "hw/display/ramfb.h"
+ #include "hw/arm/fdt.h"
++#include "hw/misc/stopwatch.h"
+ 
+ /*
+  * internal struct that contains the information to create dynamic
+@@ -458,6 +459,7 @@ static const BindingEntry bindings[] = {
+     TYPE_BINDING(TYPE_VFIO_AMD_XGBE, add_amd_xgbe_fdt_node),
+     VFIO_PLATFORM_BINDING("amd,xgbe-seattle-v1a", add_amd_xgbe_fdt_node),
+ #endif
++    TYPE_BINDING(TYPE_STOPWATCH, add_stopwatch_fdt_node),
+     TYPE_BINDING(TYPE_RAMFB_DEVICE, no_fdt_node),
+     TYPE_BINDING("", NULL), /* last element */
+ };
+diff --git a/hw/arm/virt.c b/hw/arm/virt.c
+index ce2664a..eee1fe1 100644
+--- a/hw/arm/virt.c
++++ b/hw/arm/virt.c
+@@ -61,6 +61,7 @@
+ #include "hw/arm/smmuv3.h"
+ #include "hw/acpi/acpi.h"
+ #include "target/arm/internals.h"
++#include "hw/misc/stopwatch.h"
+ 
+ #define DEFINE_VIRT_MACHINE_LATEST(major, minor, latest) \
+     static void virt_##major##_##minor##_class_init(ObjectClass *oc, \
+@@ -1874,6 +1875,7 @@ static void virt_machine_class_init(ObjectClass *oc, void *data)
+     machine_class_allow_dynamic_sysbus_dev(mc, TYPE_VFIO_AMD_XGBE);
+     machine_class_allow_dynamic_sysbus_dev(mc, TYPE_RAMFB_DEVICE);
+     machine_class_allow_dynamic_sysbus_dev(mc, TYPE_VFIO_PLATFORM);
++    machine_class_allow_dynamic_sysbus_dev(mc, TYPE_STOPWATCH);
+     mc->block_default_type = IF_VIRTIO;
+     mc->no_cdrom = 1;
+     mc->pci_allow_0_address = true;
+diff --git a/hw/misc/Makefile.objs b/hw/misc/Makefile.objs
+index c71e07a..e82a2c4 100644
+--- a/hw/misc/Makefile.objs
++++ b/hw/misc/Makefile.objs
+@@ -77,3 +77,4 @@ obj-$(CONFIG_AUX) += auxbus.o
+ obj-$(CONFIG_ASPEED_SOC) += aspeed_scu.o aspeed_sdmc.o
+ obj-$(CONFIG_MSF2) += msf2-sysreg.o
+ obj-$(CONFIG_NRF51_SOC) += nrf51_rng.o
++obj-y += stopwatch.o
+diff --git a/hw/misc/stopwatch.c b/hw/misc/stopwatch.c
+new file mode 120000
+index 0000000..7525857
+--- /dev/null
++++ b/hw/misc/stopwatch.c
+@@ -0,0 +1 @@
++../../../device/stopwatch.c
+\ No newline at end of file
+diff --git a/hw/misc/stopwatch.h b/hw/misc/stopwatch.h
+new file mode 120000
+index 0000000..409a63a
+--- /dev/null
++++ b/hw/misc/stopwatch.h
+@@ -0,0 +1 @@
++../../../device/stopwatch.h
+\ No newline at end of file
+diff --git a/hw/misc/stopwatch_hw-sw.h b/hw/misc/stopwatch_hw-sw.h
+new file mode 120000
+index 0000000..01fa0ed
+--- /dev/null
++++ b/hw/misc/stopwatch_hw-sw.h
+@@ -0,0 +1 @@
++../../../device/stopwatch_hw-sw.h
+\ No newline at end of file
